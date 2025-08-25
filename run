@@ -1,0 +1,20 @@
+#!/bin/bash
+# Usage: ./run <label> [date]
+set -euo pipefail
+
+# Load environment variables
+if [ -f "env.sh" ]; then
+    # shellcheck source=/dev/null
+    . "env.sh"
+else
+    echo "env.sh not found. Please create it and re-run."
+    exit 1
+fi
+
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <label> [date]"
+    exit 1
+fi
+
+# Pass through args to convert_obs.sh
+exec ./convert_obs.sh "$@" 
