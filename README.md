@@ -65,6 +65,7 @@ cmake --build build -j --config Release
 conda create --name pyannote-audio python==3.10.12
 conda activate pyannote-audio
 
+
 # conda install -c conda-forge libstdcxx-ng
 # conda install pytorch==2.2.0 torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
 pip install pyannote.audio
