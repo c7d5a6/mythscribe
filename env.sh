@@ -1,7 +1,8 @@
 #!/bin/bash
 # Project environment variables. Copy and adjust as needed.
 
-# Example variables; adjust to your environment.
-export MYTHSCRIBE_FFMPEG_OPTS="-ac 1 -ar 16000 -sample_fmt s16"
-export MYTHSCRIBE_OBS_DIR="obsrecord"
-export MYTHSCRIBE_SESSIONS_DIR="sessions" 
+export MYTHSCRIBE_WHISPER_CLI_PATH="/home/c7d5a6/projects/whisper.cpp/build/bin/whisper-cli"
+export MYTHSCRIBE_WHISPER_MODEL_DIR="/home/c7d5a6/Music/mythscribe/whisper-models"
+export MYTHSCRIBE_WHISPER_MODEL_PATH="${MYTHSCRIBE_WHISPER_MODEL_DIR}/ggml-large-v3.bin"
+
+conda activate nemo

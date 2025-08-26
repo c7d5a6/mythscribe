@@ -17,7 +17,68 @@ A pipeline for detecting speech and transcribing TTRPG game sessions. Designed t
 
 ## Requirements
 
+- obs studio [download](https://obsproject.com/download)
 - ffmpeg
+- cuda
+- conda
+
+### Install 
+#### ffmpeg
+
+```bash
+sudo apt install ffmpeg
+```
+
+#### CUDA
+
+```bash
+sudo apt install nvidia-cuda-toolkit
+nvcc --version
+```
+
+#### conda
+
+```bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+chmod +x Miniconda3-latest-Linux-x86_64.sh
+./Miniconda3-latest-Linux-x86_64.sh
+conda --version
+```
+
+#### Whisper.cpp
+
+```bash
+git clone https://github.com/ggml-org/whisper.cpp.git
+cd whisper.cpp
+cmake -B build -DGGML_CUDA=1
+# or for newer NVIDIA GPU's (RTX 5000 series):
+# cmake -B build -DGGML_CUDA=1 -DCMAKE_CUDA_ARCHITECTURES="86"
+cmake --build build -j --config Release
+./models/download-ggml-model.sh large-v3 [PATH_TO_MODELS]
+```
+
+#### NeMo
+
+Installation: https://docs.nvidia.com/nemo-framework/user-guide/24.09/installation.html
+
+```bash
+conda create --name nemo python==3.10.12
+conda activate nemo
+
+conda install -c conda-forge libstdcxx-ng
+conda install pytorch==2.2.0 torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+conda install requests pillow matplotlib pyyaml
+
+sudo apt-get update && sudo apt-get install -y libsndfile1 ffmpeg
+
+conda install Cython packaging 
+pip install "nemo_toolkit[asr]==1.23.0" "huggingface_hub<=0.16.4" "transformers<=4.31.0"
+pip install "datasets<=2.14.6"
+pip install "pyarrow<=11.0.0"
+
+
+python check.py
+```
 
 ## Symbolic links
 

@@ -18,3 +18,5 @@ fi
 
 # Pass through args to convert_obs.sh
 exec ./convert_obs.sh "$@" 
+
+# Run transcribe.sh for each audio file 
