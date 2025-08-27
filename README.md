@@ -9,7 +9,7 @@ A pipeline for detecting speech and transcribing TTRPG game sessions. Designed t
 1. **Recording**: Record TTRPG sessions using OBS (desktop sound + microphone)
 2. **Conversion**: Convert OBS video/audio to WAV format using ffmpeg
    - Command: `ffmpeg -i input.mp4 -ac 1 -ar 16000 -sample_fmt s16 output.wav`
-3. **Speaker Diarization**: Extract and identify individual speakers using NeMo diarization
+3. **Speaker Diarization**: Extract and identify individual speakers using pyannote-audio diarization
 4. **Audio Segmentation**: Split audio into chunks by speaker
 5. **Transcription**: Use whisper.cpp to transcribe each audio chunk with speaker labels
 6. **Text Assembly**: Merge transcribed chunks into a single text file with speaker identification
@@ -19,6 +19,7 @@ A pipeline for detecting speech and transcribing TTRPG game sessions. Designed t
 
 - obs studio [download](https://obsproject.com/download)
 - ffmpeg
+- jq
 - cuda
 - conda
 
@@ -57,25 +58,16 @@ cmake --build build -j --config Release
 ./models/download-ggml-model.sh large-v3 [PATH_TO_MODELS]
 ```
 
-#### NeMo
+#### pyannote-audio
 
-Installation: https://docs.nvidia.com/nemo-framework/user-guide/24.09/installation.html
 
 ```bash
-conda create --name nemo python==3.10.12
-conda activate nemo
+conda create --name pyannote-audio python==3.10.12
+conda activate pyannote-audio
 
-conda install -c conda-forge libstdcxx-ng
-conda install pytorch==2.2.0 torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
-conda install requests pillow matplotlib pyyaml
-
-sudo apt-get update && sudo apt-get install -y libsndfile1 ffmpeg
-
-conda install Cython packaging 
-pip install "nemo_toolkit[asr]==1.23.0" "huggingface_hub<=0.16.4" "transformers<=4.31.0"
-pip install "datasets<=2.14.6"
-pip install "pyarrow<=11.0.0"
-
+# conda install -c conda-forge libstdcxx-ng
+# conda install pytorch==2.2.0 torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+pip install pyannote.audio
 
 python check.py
 ```

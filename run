@@ -16,7 +16,31 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-# Pass through args to convert_obs.sh
-exec ./convert_obs.sh "$@" 
+LABEL=$1
 
-# Run transcribe.sh for each audio file 
+# If date not provided, default to today's date in YYYY-MM-DD
+DATE_INPUT=${2:-}
+if [ -z "$DATE_INPUT" ]; then
+    DATE=$(date +%F)
+else
+    DATE=$DATE_INPUT
+fi
+
+mkdir -p temp
+
+# Pass through args to convert_obs.sh
+exec ./convert_obs.sh "$@"
+
+# Pass through args to diarize.sh
+OUTDIR="sessions/$LABEL"
+for FILE in "$OUTDIR"/"$DATE"*.wav; do
+    exec ./diarize.sh "$FILE"
+    exec ./split-file.sh "$FILE" speakers.json temp
+done
+
+for FILE in temp/*.wav; do
+    exec ./transcribe.sh "$FILE"
+done
+
+# Run transcribe.sh for each audio file
+# rm -rf temp
