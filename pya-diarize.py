@@ -4,10 +4,18 @@ import json
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 
 from pyannote.audio import Pipeline, Model, Inference
 import torch
 from torch.nn import functional as F
+
+# Load environment variables
+load_dotenv()
+HF_TOKEN = os.getenv("HF_TOKEN")
+if not HF_TOKEN:
+    print("Error: HF_TOKEN not found in environment variables", file=sys.stderr)
+    sys.exit(1)
 
 def write_json(annotation, out_path: str) -> None:
     segments = []
@@ -45,21 +53,24 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    # Allow TF32 for faster GPU computations
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
     audio_path = Path(args.audio)
     if not audio_path.exists():
         print(f"Input audio not found: {audio_path}", file=sys.stderr)
         return 1
 
-    # Always use local pipeline path by default
-    pipeline_path = "./pyannote-diarization"
     try:
-        pipeline = Pipeline.from_pretrained(pipeline_path)
+        pipeline = Pipeline.from_pretrained(
+            "pyannote/speaker-diarization-3.1",
+            use_auth_token=HF_TOKEN
+        )
     except Exception as exc:
-        print(f"Failed to load pipeline '{pipeline_path}': {exc}", file=sys.stderr)
-        return 2
-    # send pipeline to GPU (when available)
+        print(f"Failed to load pipeline: {exc}", file=sys.stderr)
     pipeline.to(torch.device("cuda"))
+    print("Pipeline loaded and sent to GPU")
 
     # Build inputs and options for diarization
     pipeline_input = {"audio": str(audio_path)}
@@ -69,6 +80,8 @@ def main() -> int:
     try:
         if args.num_speakers is not None:
             annotation = pipeline(pipeline_input, num_speakers=int(args.num_speakers))
+            print("Diarization completed with fixed number of speakers")
+            print(annotation)
         else:
             annotation = pipeline(pipeline_input)
     except Exception as exc:
@@ -84,13 +97,16 @@ def main() -> int:
 
         # Load embedding model and create inference helper
         try:
-            emb_model = Model.from_pretrained("pyannote/embedding")
+            emb_model = Model.from_pretrained("pyannote/embedding",
+                use_auth_token=HF_TOKEN
+            )
         except Exception as exc:
             print(f"Failed to load embedding model: {exc}", file=sys.stderr)
             return 5
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        infer = Inference(emb_model, window="whole", device=device)
+        inference = Inference(emb_model, window="whole")
+        inference.to(torch.device("cuda"))
+        print("Inference model sent to device cuda")
 
         # Prepare enrolled speaker embeddings from all audio files in the directory
         supported_ext = {".wav", ".flac", ".mp3", ".m4a", ".ogg"}
@@ -99,9 +115,9 @@ def main() -> int:
             if entry.is_file() and entry.suffix.lower() in supported_ext:
                 name = entry.stem
                 try:
-                    emb_np = infer(str(entry))  # numpy array
+                    emb_np = inference(entry.absolute())  # numpy array
                 except Exception as exc:
-                    print(f"Skip enrollment '{name}' ({entry}): {exc}", file=sys.stderr)
+                    print(f"Skip enrollment '{name}' ({entry.absolute()}): {exc}", file=sys.stderr)
                     continue
                 emb_t = torch.tensor(emb_np, dtype=torch.float32)
                 enrolled[name] = emb_t
@@ -114,7 +130,7 @@ def main() -> int:
         reassigned = []
         for segment, _, _ in annotation.itertracks(yield_label=True):
             try:
-                seg_emb_np = infer.crop(str(audio_path), segment)
+                seg_emb_np = inference.crop(str(audio_path), segment)
             except Exception as exc:
                 print(f"Failed to embed segment {segment}: {exc}", file=sys.stderr)
                 continue

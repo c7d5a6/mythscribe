@@ -80,7 +80,25 @@ echo "$SEGMENTS" | while IFS='|' read -r start end speaker; do
         echo "Segment $COUNTER: ${start}s - ${end}s (${speaker}) -> $OUTPUT_FILENAME"
         
         # Use ffmpeg to extract the segment with proper WAV audio parameters
-        ffmpeg -i "$INPUT_FILE" -ss "$start" -to "$end" -ac 1 -ar 16000 -sample_fmt s16 "$OUTPUT_PATH" -y -loglevel error
+        ffmpeg -i "$INPUT_FILE" \
+            -ss "$start" -to "$end" \
+            -ac 1 -ar 16000 -sample_fmt s16 \
+            "$OUTPUT_PATH" -y -loglevel error
+        # Create concat file with proper paths
+        if [ -f silence_1s.wav ]; then
+            # Create a temporary concat file
+            CONCAT_FILE=$(mktemp)
+            printf "file '%s'\nfile '%s'\nfile '%s'\n" \
+                "$(realpath silence_1s.wav)" \
+                "$(realpath "$OUTPUT_PATH")" \
+                "$(realpath silence_1s.wav)" > "$CONCAT_FILE"
+            
+            # Use the concat file
+            ffmpeg -y -loglevel error -f concat -safe 0 -i "$CONCAT_FILE" -c copy "${OUTPUT_PATH}.tmp.wav" && mv "${OUTPUT_PATH}.tmp.wav" "$OUTPUT_PATH"
+            
+            # Clean up temp concat file
+            rm "$CONCAT_FILE"
+        fi
         
         if [ $? -eq 0 ]; then
             echo "  ✓ Created: $OUTPUT_FILENAME"

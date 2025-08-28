@@ -6,6 +6,8 @@ if [ $# -lt 2 ]; then
     exit 1
 fi
 
+. env.sh
+
 INPUT_FILE=$1
 OUTPUT_FILE=$2
 
@@ -15,7 +17,7 @@ ${MYTHSCRIBE_WHISPER_CLI_PATH} \
 	-p 4 \
 	--beam-size 8 \
 	--best-of 8 \
-	--temperature "0.0 0.2 0.4" \
+	--temperature "0.0 0.1 0.2" \
 	-otxt -of ${OUTPUT_FILE} \
 	-m ${MYTHSCRIBE_WHISPER_MODEL_PATH} \
 	-f ${INPUT_FILE}

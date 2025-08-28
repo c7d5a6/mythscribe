@@ -29,18 +29,47 @@ fi
 mkdir -p temp
 
 # Pass through args to convert_obs.sh
-exec ./convert_obs.sh "$@"
+# ./convert_obs.sh "$@"
 
 # Pass through args to diarize.sh
 OUTDIR="sessions/$LABEL"
+echo "Diarizing $OUTDIR/$DATE*.wav"
 for FILE in "$OUTDIR"/"$DATE"*.wav; do
-    exec ./diarize.sh "$FILE"
-    exec ./split-file.sh "$FILE" speakers.json temp
+    echo "Diarizing $FILE"
+    ./diarize.sh "$FILE"
+    ./split-file.sh "$FILE" speakers.json temp
 done
 
+# Transcribe split files and build transcript
+TRANSCRIPT_DIR="transcribe/$LABEL"
+mkdir -p "$TRANSCRIPT_DIR"
+TRANSCRIPT_FILE="$TRANSCRIPT_DIR/$DATE.txt"
+
+# Clear/create transcript file
+> "$TRANSCRIPT_FILE"
+
 for FILE in temp/*.wav; do
-    exec ./transcribe.sh "$FILE"
+    # Extract speaker name more robustly
+    FILENAME=$(basename "$FILE")
+    SPEAKER_NAME=$(echo "$FILENAME" | sed -E 's/^[0-9]+-([^-]+)-.*/\1/')
+    
+    echo "Transcribing $FILE for speaker $SPEAKER_NAME"
+    
+    # Transcribe to temp file
+    ./transcribe.sh "$FILE" temp_transcript
+    
+    # Process transcript
+    if [ -f temp_transcript.txt ]; then
+        # Remove linebreaks and add speaker prefix
+        PROCESSED_TEXT=$(cat temp_transcript.txt | tr '\n' '. ' | sed "s/^/[$SPEAKER_NAME]: /")
+        echo "$PROCESSED_TEXT" >> "$TRANSCRIPT_FILE"
+        echo "" >> "$TRANSCRIPT_FILE"
+        
+        # rm temp_transcript.txt
+    fi
 done
+
+echo "Transcript saved to $TRANSCRIPT_FILE"
 
 # Run transcribe.sh for each audio file
 # rm -rf temp
