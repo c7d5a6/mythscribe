@@ -37,7 +37,7 @@ echo "Diarizing $OUTDIR/$DATE*.wav"
 for FILE in "$OUTDIR"/"$DATE"*.wav; do
     echo "Diarizing $FILE"
     ./diarize.sh "$FILE"
-    ./split-file.sh "$FILE" speakers.json temp
+    # ./split-file.sh "$FILE" speakers.json temp
 done
 
 # Transcribe split files and build transcript
