@@ -7,7 +7,6 @@ if [ $# -lt 1 ]; then
 fi
 
 LABEL=$1
-# If date not provided, default to today's date in YYYY-MM-DD
 DATE_INPUT=${2:-}
 if [ -z "$DATE_INPUT" ]; then
     DATE=$(date +%F)
@@ -18,25 +17,43 @@ fi
 OUTDIR="sessions/$LABEL"
 mkdir -p "$OUTDIR"
 
+CHUNK_MINUTES=30
+CHUNK_SECONDS=$((CHUNK_MINUTES * 60))
+
 IDX=0
 for FILE in obsrecord/"$DATE"*.mp4; do
-    # skip if no files found
     [ -e "$FILE" ] || continue
 
-    IDX=$((IDX + 1))
-    OUTFILE="$OUTDIR/$DATE-$IDX.wav"
+    BASENAME=$(basename "$FILE" .mp4)
+    echo "Processing $FILE"
 
-    if [ -f "$OUTFILE" ]; then
-        echo "Skipping $FILE → $OUTFILE (already exists)"
-        continue
-    fi
+    TMPFILE="$OUTDIR/$BASENAME-temp.wav"
+    ffmpeg -y -i "$FILE" -ac 1 -ar 16000 -sample_fmt s16 \
+      -af "highpass=f=80, dynaudnorm=f=150:g=15, loudnorm=I=-24:LRA=7:TP=-2" \
+      "$TMPFILE"
 
-    echo "Converting $FILE → $OUTFILE"
-    ffmpeg -i "$FILE" -ac 1 -ar 16000 -sample_fmt s16 "$OUTFILE"
+    # Get total duration in seconds (rounded down)
+    FILE_DURATION=$(ffprobe -v error -show_entries format=duration \
+        -of default=noprint_wrappers=1:nokey=1 "$TMPFILE" | cut -d'.' -f1)
+
+    CHUNK_IDX=0
+    while [ $((CHUNK_IDX * CHUNK_SECONDS)) -lt "$FILE_DURATION" ]; do
+        OUTFILE="$OUTDIR/${DATE}-$(printf "%03d" $((IDX+1))).wav"
+
+        ffmpeg -y -i "$TMPFILE" \
+            -ss $((CHUNK_IDX * CHUNK_SECONDS)) \
+            -t $CHUNK_SECONDS \
+            -c copy "$OUTFILE" -loglevel error
+
+        echo "  Created chunk: $OUTFILE"
+
+        IDX=$((IDX + 1))
+        CHUNK_IDX=$((CHUNK_IDX + 1))
+    done
+
+    rm -f "$TMPFILE"
 done
 
-# If no files matched, inform the user
 if [ $IDX -eq 0 ]; then
     echo "No files found matching obsrecord/$DATE*.mp4"
 fi
-

@@ -74,6 +74,13 @@ pip install dotenv
 python check.py
 ```
 
+### whisperx
+
+```bash
+conda install cudnn -c conda-forge
+pip install whisperx
+```
+
 ## Symbolic links
 
 This folders contains real data with recording, transcribes and temporary data
