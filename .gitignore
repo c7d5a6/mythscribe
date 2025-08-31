@@ -10,3 +10,5 @@ out.temp.txt
 temp_transcript.txt
 
 temp_transcript.txt.txt
+
+__pycache__/
